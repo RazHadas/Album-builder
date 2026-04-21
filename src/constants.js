@@ -223,11 +223,35 @@ export const RESOLUTION_OPTIONS = [
 ]
 
 export const DEFAULT_CONFIG = {
-  pageSize:     PAGE_SIZES[0],
-  orientation:  'portrait',
-  layout:       'quartet',
-  theme:        THEMES[1], // Polaroid
-  resolution:   RESOLUTION_OPTIONS[1],
-  margin:       10,
-  autoArrange:  false,
+  pageSize:       PAGE_SIZES[0],
+  orientation:    'portrait',
+  layout:         'quartet',
+  theme:          THEMES[1], // Polaroid
+  resolution:     RESOLUTION_OPTIONS[1],
+  margin:         10,
+  autoArrange:    false,
+  customTemplate: null, // { name, description, cells: [{x,y,w,h}] }
+}
+
+/**
+ * Validates and parses a custom layout JSON string.
+ * Returns { ok: true, template } or { ok: false, error }.
+ */
+export function parseTemplate(jsonStr) {
+  try {
+    const t = JSON.parse(jsonStr)
+    if (!Array.isArray(t.cells) || t.cells.length === 0)
+      return { ok: false, error: 'Missing "cells" array.' }
+    for (const [i, c] of t.cells.entries()) {
+      for (const k of ['x', 'y', 'w', 'h']) {
+        if (typeof c[k] !== 'number' || c[k] < 0 || c[k] > 1)
+          return { ok: false, error: `Cell ${i + 1}: "${k}" must be a number between 0 and 1.` }
+      }
+      if (c.x + c.w > 1.01 || c.y + c.h > 1.01)
+        return { ok: false, error: `Cell ${i + 1} exceeds page bounds (x+w or y+h > 1).` }
+    }
+    return { ok: true, template: { name: t.name || 'Custom', description: t.description || '', cells: t.cells } }
+  } catch {
+    return { ok: false, error: 'Invalid JSON file.' }
+  }
 }

@@ -270,7 +270,14 @@ export async function renderPageToCanvas(pagePhotos, config, pageWidthPx, pageHe
   const aw = pageWidthPx  - 2 * marginPx
   const ah = pageHeightPx - 2 * marginPx
 
-  const cells = getCells(config.layout, aw, ah, marginPx, marginPx, gapPx)
+  const cells = config.customTemplate
+    ? config.customTemplate.cells.map(c => ({
+        x: marginPx + c.x * aw,
+        y: marginPx + c.y * ah,
+        w: c.w * aw,
+        h: c.h * ah,
+      }))
+    : getCells(config.layout, aw, ah, marginPx, marginPx, gapPx)
 
   const loadResults = await Promise.allSettled(
     pagePhotos.map(p => loadImage(p.url))

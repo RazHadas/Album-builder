@@ -17,9 +17,10 @@ export default function App() {
   const [analyzeProgress, setAnalyzeProgress] = useState(0)
 
   const perPage = useMemo(() => {
+    if (config.customTemplate) return config.customTemplate.cells.length
     const layout = LAYOUTS.find(l => l.id === config.layout)
     return layout ? layout.perPage : 4
-  }, [config.layout])
+  }, [config.layout, config.customTemplate])
 
   // Manual pages (single theme, original order)
   const manualPages = useMemo(() => {
