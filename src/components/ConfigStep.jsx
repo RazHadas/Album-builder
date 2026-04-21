@@ -1,4 +1,4 @@
-import { PAGE_SIZES, LAYOUTS, LAYOUT_CONFIGS, BACKGROUND_PRESETS, RESOLUTION_OPTIONS } from '../constants'
+import { PAGE_SIZES, LAYOUTS, LAYOUT_CONFIGS, THEMES, RESOLUTION_OPTIONS, PREVIEW_W, getBgStyle } from '../constants'
 
 export default function ConfigStep({ config, setConfig, pageCount, onBack, onNext }) {
   const set = (key, value) => setConfig(prev => ({ ...prev, [key]: value }))
@@ -7,9 +7,23 @@ export default function ConfigStep({ config, setConfig, pageCount, onBack, onNex
     <div className="space-y-4">
       {pageCount > 0 && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 text-sm text-indigo-700 font-medium">
-          This will generate <strong>{pageCount} page{pageCount !== 1 ? 's' : ''}</strong> with your current settings
+          Este álbum terá <strong>{pageCount} página{pageCount !== 1 ? 's' : ''}</strong> com as configurações atuais
         </div>
       )}
+
+      {/* Theme */}
+      <Card title="🎨 Visual Theme">
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+          {THEMES.map(theme => (
+            <ThemeCard
+              key={theme.id}
+              theme={theme}
+              selected={config.theme.id === theme.id}
+              onClick={() => set('theme', theme)}
+            />
+          ))}
+        </div>
+      </Card>
 
       {/* Page Size */}
       <Card title="Page Size">
@@ -69,42 +83,6 @@ export default function ConfigStep({ config, setConfig, pageCount, onBack, onNex
         </div>
       </Card>
 
-      {/* Background */}
-      <Card title="Background Color">
-        <div className="flex flex-wrap gap-2 items-center">
-          {BACKGROUND_PRESETS.map(bg => (
-            <button
-              key={bg.id}
-              onClick={() => set('background', bg)}
-              title={bg.name}
-              className={[
-                'w-9 h-9 rounded-full border-4 transition-all shrink-0',
-                bg.value === '#ffffff' ? 'border-gray-200' : 'border-transparent',
-                config.background.id === bg.id ? 'ring-2 ring-indigo-500 ring-offset-2 scale-110' : 'hover:scale-105',
-              ].join(' ')}
-              style={{ backgroundColor: bg.value }}
-            />
-          ))}
-          {/* Custom color picker */}
-          <label
-            className="relative w-9 h-9 rounded-full border-4 border-dashed border-gray-300 overflow-hidden cursor-pointer hover:border-indigo-400 hover:scale-105 transition-all shrink-0"
-            title="Custom color"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-red-400 via-yellow-300 via-green-400 to-blue-500" />
-            <input
-              type="color"
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              value={config.background.value}
-              onChange={e => set('background', { id: 'custom', name: 'Custom', value: e.target.value })}
-            />
-          </label>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="w-5 h-5 rounded border border-gray-200" style={{ backgroundColor: config.background.value }} />
-          <span className="text-xs text-gray-500">{config.background.name} · {config.background.value}</span>
-        </div>
-      </Card>
-
       {/* Print Quality */}
       <Card title="Print Quality">
         <div className="grid grid-cols-2 gap-2">
@@ -126,37 +104,111 @@ export default function ConfigStep({ config, setConfig, pageCount, onBack, onNex
       <Card title={`Page Margin — ${config.margin} mm`}>
         <input
           type="range"
-          min="0"
-          max="25"
-          step="1"
+          min="0" max="25" step="1"
           value={config.margin}
           onChange={e => set('margin', Number(e.target.value))}
           className="w-full"
         />
         <div className="flex justify-between text-xs text-gray-400 mt-1">
-          <span>0 mm</span>
-          <span>25 mm</span>
+          <span>0 mm</span><span>25 mm</span>
         </div>
       </Card>
 
       {/* Navigation */}
       <div className="flex gap-3 pt-1">
-        <button
-          onClick={onBack}
-          className="flex-1 py-3.5 border-2 border-gray-200 rounded-2xl font-semibold text-gray-600 hover:border-gray-300 transition-colors"
-        >
+        <button onClick={onBack} className="flex-1 py-3.5 border-2 border-gray-200 rounded-2xl font-semibold text-gray-600 hover:border-gray-300 transition-colors">
           ← Back
         </button>
-        <button
-          onClick={onNext}
-          className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition-colors"
-        >
+        <button onClick={onNext} className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition-colors">
           Preview Album →
         </button>
       </div>
     </div>
   )
 }
+
+/* ── Theme card with live mini-page preview ── */
+
+const MINI_W = 58
+const MINI_H = Math.round(MINI_W * 1.414)
+
+function ThemeCard({ theme, selected, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        'flex flex-col items-center gap-1 rounded-xl overflow-hidden transition-all focus:outline-none',
+        selected
+          ? 'ring-2 ring-indigo-500 ring-offset-2 scale-105 shadow-md'
+          : 'hover:scale-105 hover:shadow-sm',
+      ].join(' ')}
+    >
+      <ThemeMiniPage theme={theme} />
+      <span className={`text-[9px] font-medium leading-tight text-center px-0.5 ${selected ? 'text-indigo-600' : 'text-gray-500'}`}>
+        {theme.name}
+      </span>
+    </button>
+  )
+}
+
+function ThemeMiniPage({ theme }) {
+  const margin = 4
+  const scale  = MINI_W / PREVIEW_W
+  const gap    = Math.max(1, Math.round(theme.photo.gap   * scale))
+  const frame  = Math.round(theme.photo.frame  * scale)
+  const radius = Math.round(theme.photo.radius * scale)
+
+  const cellW = (MINI_W - 2 * margin - gap) / 2
+  const cellH = (MINI_H - 2 * margin - gap) / 2
+
+  const innerRadius = Math.max(0, radius - frame)
+
+  return (
+    <div
+      style={{
+        width:    MINI_W,
+        height:   MINI_H,
+        position: 'relative',
+        overflow: 'hidden',
+        borderRadius: 6,
+        ...getBgStyle(theme.bg),
+      }}
+    >
+      {[0, 1, 2, 3].map(i => {
+        const col = i % 2
+        const row = Math.floor(i / 2)
+        return (
+          <div
+            key={i}
+            style={{
+              position:        'absolute',
+              left:            margin + col * (cellW + gap),
+              top:             margin + row * (cellH + gap),
+              width:           cellW,
+              height:          cellH,
+              backgroundColor: frame > 0 ? theme.photo.frameColor : 'rgba(0,0,0,0)',
+              borderRadius:    radius,
+              boxShadow:       theme.photo.shadow ? '0 1px 4px rgba(0,0,0,0.25)' : 'none',
+              padding:         frame,
+              boxSizing:       'border-box',
+            }}
+          >
+            <div
+              style={{
+                width:           '100%',
+                height:          '100%',
+                backgroundColor: 'rgba(120,120,120,0.45)',
+                borderRadius:    innerRadius,
+              }}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/* ── shared helpers ── */
 
 function Card({ title, children }) {
   return (
@@ -170,31 +222,20 @@ function Card({ title, children }) {
 function optionClass(selected) {
   return [
     'flex flex-col items-start p-3 rounded-xl border-2 text-left transition-all w-full',
-    selected
-      ? 'border-indigo-500 bg-indigo-50'
-      : 'border-gray-200 bg-white hover:border-gray-300',
+    selected ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300',
   ].join(' ')
 }
 
 function LayoutIcon({ id, selected }) {
   const color = selected ? '#6366f1' : '#9ca3af'
-  const bg = selected ? '#e0e7ff' : '#f3f4f6'
-  const s = { backgroundColor: color, borderRadius: 2 }
-
-  const wrap = {
-    width: 40,
-    height: 40,
-    backgroundColor: bg,
-    borderRadius: 6,
-    padding: 4,
-    display: 'grid',
-    gap: 2,
-    boxSizing: 'border-box',
+  const bg    = selected ? '#e0e7ff' : '#f3f4f6'
+  const s     = { backgroundColor: color, borderRadius: 2 }
+  const wrap  = {
+    width: 40, height: 40, backgroundColor: bg, borderRadius: 6,
+    padding: 4, display: 'grid', gap: 2, boxSizing: 'border-box',
   }
-
   const cfg = LAYOUT_CONFIGS[id]
   if (!cfg) return <div style={{ ...wrap, gridTemplateColumns: '1fr', gridTemplateRows: '1fr' }}><div style={s} /></div>
-
   return (
     <div style={{ ...wrap, gridTemplateColumns: cfg.gridTemplateColumns, gridTemplateRows: cfg.gridTemplateRows }}>
       {cfg.cells.map((cell, i) => (

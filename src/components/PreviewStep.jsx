@@ -36,6 +36,7 @@ export default function PreviewStep({ pages, config, onBack }) {
       <div className="bg-white rounded-2xl px-4 py-3 shadow-sm flex flex-wrap gap-4">
         <Stat label="Pages" value={pages.length} />
         <Stat label="Photos" value={totalPhotos} />
+        <Stat label="Theme"  value={config.theme.name} />
         <Stat label="Layout" value={config.layout} />
         <Stat label="Quality" value={`${config.resolution.dpi} DPI`} />
       </div>
@@ -52,7 +53,7 @@ export default function PreviewStep({ pages, config, onBack }) {
                 <AlbumPage
                   photos={pagePhotos}
                   layoutId={config.layout}
-                  background={config.background}
+                  theme={config.theme}
                   pageSize={config.pageSize}
                   orientation={config.orientation}
                   margin={config.margin}
