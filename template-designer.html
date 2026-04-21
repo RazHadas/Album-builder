@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Template Designer — Album Builder</title>
+  <!-- paper.css by cognitom: https://github.com/cognitom/paper-css -->
+  <link rel="stylesheet" href="https://unpkg.com/paper-css@0.3.0/paper.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #4f46e5;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+      flex-shrink: 0;
+    }
+    header a { color: #c7d2fe; text-decoration: none; font-size: 13px; }
+    header h1 { font-size: 17px; font-weight: 700; }
+
+    /* ── Layout ── */
+    .app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Side panel ── */
+    .panel {
+      width: 280px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .panel-section { display: flex; flex-direction: column; gap: 8px; }
+    .panel-section h3 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #64748b;
+    }
+
+    label { font-size: 13px; color: #374151; }
+    select, input[type=text] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #1f2937;
+      background: #fff;
+      outline: none;
+      transition: border-color .15s;
+    }
+    select:focus, input[type=text]:focus { border-color: #6366f1; }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+    }
+    .btn-primary { background: #4f46e5; color: #fff; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-danger  { background: #fee2e2; color: #dc2626; }
+    .btn-danger:hover { background: #fecaca; }
+    .btn-outline { background: #fff; color: #374151; border: 1.5px solid #d1d5db; }
+    .btn-outline:hover { border-color: #6366f1; color: #4f46e5; }
+    .btn-green  { background: #d1fae5; color: #065f46; }
+    .btn-green:hover { background: #a7f3d0; }
+
+    /* Zone list */
+    #zone-list { display: flex; flex-direction: column; gap: 6px; }
+    .zone-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .zone-item.selected { border-color: #6366f1; background: #eef2ff; }
+    .zone-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .zone-item-label { font-size: 12px; flex: 1; color: #1f2937; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .zone-item-coords { font-size: 10px; color: #94a3b8; }
+    .zone-del { background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 16px; line-height: 1; padding: 2px; }
+    .zone-del:hover { color: #dc2626; }
+
+    /* Selected zone editor */
+    #selected-editor { display: none; flex-direction: column; gap: 8px; padding: 10px; background: #eef2ff; border-radius: 10px; border: 1.5px solid #c7d2fe; }
+    #selected-editor.visible { display: flex; }
+    #selected-editor label { font-size: 12px; color: #4338ca; font-weight: 600; }
+
+    /* Instructions */
+    .hint {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.6;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .hint strong { color: #1f2937; }
+
+    /* JSON preview */
+    #json-box {
+      font-family: 'Menlo', 'Monaco', monospace;
+      font-size: 10px;
+      background: #0f172a;
+      color: #7dd3fc;
+      border-radius: 10px;
+      padding: 10px;
+      white-space: pre;
+      overflow: auto;
+      max-height: 200px;
+      display: none;
+    }
+    #json-box.visible { display: block; }
+
+    /* ── Canvas area ── */
+    .canvas-area {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 24px;
+      background: #e2e8f0;
+    }
+
+    /* paper.css sheet overrides — we use its visual styling but set pixel dims */
+    .sheet {
+      position: relative;
+      cursor: crosshair;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .sheet.padding-10mm { padding: 0 !important; } /* we handle margin via canvas inset */
+
+    /* Page size presets (width × height in px at ~72dpi screen scale) */
+    body.A4     .sheet { width: 500px; height: 707px; }
+    body.A5     .sheet { width: 500px; height: 354px; }
+    body.Letter .sheet { width: 500px; height: 647px; }
+    body.Square .sheet { width: 500px; height: 500px; }
+    body.A4.landscape     .sheet { width: 707px; height: 500px; }
+    body.A5.landscape     .sheet { width: 354px; height: 250px; }
+    body.Letter.landscape .sheet { width: 647px; height: 500px; }
+    body.Square.landscape .sheet { width: 500px; height: 500px; }
+
+    /* Canvas inset — the area where zones live (inside margin) */
+    #canvas {
+      position: absolute;
+      inset: 0;
+      /* margin set dynamically by JS */
+    }
+
+    /* Drawing preview */
+    #draw-preview {
+      position: absolute;
+      border: 2px dashed #6366f1;
+      background: rgba(99,102,241,.08);
+      pointer-events: none;
+      display: none;
+      border-radius: 4px;
+    }
+
+    /* Rendered zones */
+    .zone-rect {
+      position: absolute;
+      border: 2px solid;
+      border-radius: 4px;
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 4px;
+      transition: box-shadow .1s;
+    }
+    .zone-rect:hover, .zone-rect.selected { box-shadow: 0 0 0 3px rgba(99,102,241,.4); }
+    .zone-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #fff;
+      pointer-events: none;
+    }
+    .zone-lbl {
+      font-size: 9px;
+      font-weight: 600;
+      color: rgba(0,0,0,.55);
+      text-align: center;
+      padding: 0 4px;
+      pointer-events: none;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* resize handle */
+    .resize-handle {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid #6366f1;
+      cursor: se-resize;
+      bottom: -5px;
+      right: -5px;
+    }
+
+    /* margin guide lines */
+    #margin-guide {
+      position: absolute;
+      pointer-events: none;
+      border: 1px dashed #d1d5db;
+      border-radius: 2px;
+    }
+
+    @media (max-width: 700px) {
+      .app { flex-direction: column; }
+      .panel { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body class="A4">
+
+<header>
+  <span style="font-size:22px">📐</span>
+  <h1>Template Designer</h1>
+  <span style="flex:1"></span>
+  <a href="./index.html">← Back to Album Builder</a>
+</header>
+
+<div class="app">
+
+  <!-- ── Side panel ── -->
+  <div class="panel">
+
+    <div class="panel-section">
+      <h3>Page</h3>
+      <label>Size
+        <select id="sel-size">
+          <option value="A4">A4 (210 × 297 mm)</option>
+          <option value="A5">A5 (148 × 210 mm)</option>
+          <option value="Letter">Letter (216 × 279 mm)</option>
+          <option value="Square">Square (200 × 200 mm)</option>
+        </select>
+      </label>
+      <label>Orientation
+        <select id="sel-orient">
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </label>
+      <label>Page margin (mm)
+        <select id="sel-margin">
+          <option value="10">10 mm</option>
+          <option value="15">15 mm</option>
+          <option value="20">20 mm</option>
+          <option value="5">5 mm</option>
+          <option value="0">0 mm (no margin)</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel-section">
+      <h3>Template</h3>
+      <label>Template name
+        <input type="text" id="tpl-name" value="My Custom Layout" />
+      </label>
+      <label>Description
+        <input type="text" id="tpl-desc" placeholder="Optional description…" />
+      </label>
+    </div>
+
+    <div class="panel-section">
+      <h3>Zones (<span id="zone-count">0</span>)</h3>
+      <div id="zone-list"></div>
+
+      <!-- Selected zone editor -->
+      <div id="selected-editor">
+        <label>Label for selected zone</label>
+        <input type="text" id="zone-label-input" placeholder="e.g. Hero photo" />
+        <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete zone</button>
+      </div>
+
+      <button class="btn btn-outline" onclick="clearAll()">Clear all zones</button>
+    </div>
+
+    <div class="panel-section">
+      <h3>Hint</h3>
+      <div class="hint">
+        <strong>Draw:</strong> click &amp; drag on the page<br>
+        <strong>Move:</strong> drag a zone<br>
+        <strong>Resize:</strong> drag the ◉ handle<br>
+        <strong>Delete:</strong> select → Delete key<br>
+        <strong>Label:</strong> click zone → type label
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button class="btn btn-green" onclick="toggleJson()">👁 Preview JSON</button>
+      <pre id="json-box"></pre>
+      <button class="btn btn-primary" onclick="downloadJson()">⬇ Download template.json</button>
+      <p style="font-size:11px;color:#64748b">Upload this file in Album Builder → Layout → Custom Template.</p>
+    </div>
+
+  </div><!-- /panel -->
+
+  <!-- ── Canvas area ── -->
+  <div class="canvas-area">
+    <section class="sheet" id="paper">
+      <div id="canvas">
+        <div id="margin-guide"></div>
+        <div id="draw-preview"></div>
+      </div>
+    </section>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let zones = []       // { id, x, y, w, h, label }
+let selectedId = null
+let nextId = 1
+
+// Drawing state
+let isDrawing = false
+let drawAnchor = null // { x, y } in canvas fraction coords
+
+// Dragging state (move zone)
+let isDragging = false
+let dragId = null
+let dragOffset = { x: 0, y: 0 }
+
+// Resizing state
+let isResizing = false
+let resizeId = null
+let resizeAnchor = null // start fraction
+
+const ZONE_COLORS = [
+  '#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6',
+  '#8b5cf6','#ec4899','#14b8a6','#f97316','#84cc16'
+]
+
+// Page size definitions in mm [width, height]
+const PAGE_SIZES = {
+  A4:     [210, 297],
+  A5:     [148, 210],
+  Letter: [215.9, 279.4],
+  Square: [200, 200],
+}
+
+// Margin in mm
+let currentMarginMm = 10
+
+// ── DOM references ─────────────────────────────────────────────────────────
+const paper      = document.getElementById('paper')
+const canvas     = document.getElementById('canvas')
+const drawPreview = document.getElementById('draw-preview')
+const marginGuide = document.getElementById('margin-guide')
+const zoneList   = document.getElementById('zone-list')
+const zoneCount  = document.getElementById('zone-count')
+const selEditor  = document.getElementById('selected-editor')
+const labelInput = document.getElementById('zone-label-input')
+const jsonBox    = document.getElementById('json-box')
+
+// ── Page setup ─────────────────────────────────────────────────────────────
+function applyPageSettings() {
+  const size   = document.getElementById('sel-size').value
+  const orient = document.getElementById('sel-orient').value
+  currentMarginMm = parseInt(document.getElementById('sel-margin').value, 10)
+
+  document.body.className = orient === 'landscape' ? `${size} landscape` : size
+
+  // Update margin guide
+  const cw = canvas.offsetWidth
+  const ch = canvas.offsetHeight
+  const [wmm, hmm] = PAGE_SIZES[size]
+  const pw = orient === 'landscape' ? hmm : wmm
+  const ph = orient === 'landscape' ? wmm : hmm
+  const mxFrac = currentMarginMm / pw
+  const myFrac = currentMarginMm / ph
+
+  marginGuide.style.left   = (mxFrac * 100) + '%'
+  marginGuide.style.top    = (myFrac * 100) + '%'
+  marginGuide.style.width  = ((1 - 2 * mxFrac) * 100) + '%'
+  marginGuide.style.height = ((1 - 2 * myFrac) * 100) + '%'
+
+  renderAll()
+}
+
+document.getElementById('sel-size').addEventListener('change', applyPageSettings)
+document.getElementById('sel-orient').addEventListener('change', applyPageSettings)
+document.getElementById('sel-margin').addEventListener('change', applyPageSettings)
+
+// ── Coordinate helpers ─────────────────────────────────────────────────────
+function getCanvasFrac(e) {
+  const rect = canvas.getBoundingClientRect()
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY
+  return {
+    x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+    y: Math.max(0, Math.min(1, (clientY - rect.top)  / rect.height)),
+  }
+}
+
+// ── Draw zones ─────────────────────────────────────────────────────────────
+canvas.addEventListener('mousedown', onCanvasDown)
+canvas.addEventListener('touchstart', onCanvasDown, { passive: false })
+
+function onCanvasDown(e) {
+  // Only start drawing if clicking the canvas/guide background (not a zone)
+  if (e.target !== canvas && e.target !== marginGuide && e.target !== drawPreview) return
+  e.preventDefault()
+  selectZone(null)
+  isDrawing = true
+  drawAnchor = getCanvasFrac(e)
+  drawPreview.style.display = 'block'
+  drawPreview.style.left = (drawAnchor.x * 100) + '%'
+  drawPreview.style.top  = (drawAnchor.y * 100) + '%'
+  drawPreview.style.width  = '0'
+  drawPreview.style.height = '0'
+}
+
+window.addEventListener('mousemove', onWindowMove)
+window.addEventListener('touchmove', onWindowMove, { passive: false })
+
+function onWindowMove(e) {
+  if (isDrawing) {
+    e.preventDefault()
+    const cur = getCanvasFrac(e)
+    const x = Math.min(drawAnchor.x, cur.x)
+    const y = Math.min(drawAnchor.y, cur.y)
+    const w = Math.abs(cur.x - drawAnchor.x)
+    const h = Math.abs(cur.y - drawAnchor.y)
+    drawPreview.style.left   = (x * 100) + '%'
+    drawPreview.style.top    = (y * 100) + '%'
+    drawPreview.style.width  = (w * 100) + '%'
+    drawPreview.style.height = (h * 100) + '%'
+  } else if (isDragging && dragId !== null) {
+    e.preventDefault()
+    const cur = getCanvasFrac(e)
+    const z = zones.find(z => z.id === dragId)
+    if (z) {
+      z.x = Math.max(0, Math.min(1 - z.w, cur.x - dragOffset.x))
+      z.y = Math.max(0, Math.min(1 - z.h, cur.y - dragOffset.y))
+      renderAll()
+    }
+  } else if (isResizing && resizeId !== null) {
+    e.preventDefault()
+    const cur = getCanvasFrac(e)
+    const z = zones.find(z => z.id === resizeId)
+    if (z) {
+      z.w = Math.max(0.03, Math.min(1 - z.x, cur.x - z.x))
+      z.h = Math.max(0.03, Math.min(1 - z.y, cur.y - z.y))
+      renderAll()
+    }
+  }
+}
+
+window.addEventListener('mouseup', onWindowUp)
+window.addEventListener('touchend', onWindowUp)
+
+function onWindowUp(e) {
+  if (isDrawing) {
+    isDrawing = false
+    drawPreview.style.display = 'none'
+    const cur = getCanvasFrac(e.changedTouches ? { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY } : e)
+    const x = Math.min(drawAnchor.x, cur.x)
+    const y = Math.min(drawAnchor.y, cur.y)
+    const w = Math.abs(cur.x - drawAnchor.x)
+    const h = Math.abs(cur.y - drawAnchor.y)
+    if (w > 0.02 && h > 0.02) addZone(x, y, w, h)
+  }
+  isDragging = false
+  isResizing = false
+  dragId = null
+  resizeId = null
+}
+
+// ── Zone CRUD ──────────────────────────────────────────────────────────────
+function addZone(x, y, w, h) {
+  const id = nextId++
+  zones.push({ id, x, y, w, h, label: '' })
+  selectZone(id)
+  renderAll()
+  labelInput.focus()
+}
+
+function deleteSelected() {
+  if (selectedId === null) return
+  zones = zones.filter(z => z.id !== selectedId)
+  selectZone(null)
+  renderAll()
+}
+
+function clearAll() {
+  if (!zones.length) return
+  if (!confirm('Delete all zones?')) return
+  zones = []
+  selectZone(null)
+  renderAll()
+}
+
+function selectZone(id) {
+  selectedId = id
+  if (id !== null) {
+    selEditor.classList.add('visible')
+    const z = zones.find(z => z.id === id)
+    labelInput.value = z?.label || ''
+  } else {
+    selEditor.classList.remove('visible')
+    labelInput.value = ''
+  }
+  renderAll()
+}
+
+labelInput.addEventListener('input', () => {
+  if (selectedId === null) return
+  const z = zones.find(z => z.id === selectedId)
+  if (z) { z.label = labelInput.value; renderAll() }
+})
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (document.activeElement === labelInput) return
+    deleteSelected()
+  }
+})
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderAll() {
+  // Remove old zone elements
+  canvas.querySelectorAll('.zone-rect').forEach(el => el.remove())
+
+  // Render zones
+  zones.forEach((z, i) => {
+    const color = ZONE_COLORS[i % ZONE_COLORS.length]
+    const el = document.createElement('div')
+    el.className = 'zone-rect' + (z.id === selectedId ? ' selected' : '')
+    el.style.left   = (z.x * 100) + '%'
+    el.style.top    = (z.y * 100) + '%'
+    el.style.width  = (z.w * 100) + '%'
+    el.style.height = (z.h * 100) + '%'
+    el.style.background = color + '22'
+    el.style.borderColor = color
+
+    // Number badge
+    const num = document.createElement('div')
+    num.className = 'zone-num'
+    num.style.background = color
+    num.textContent = i + 1
+    el.appendChild(num)
+
+    // Label
+    if (z.label) {
+      const lbl = document.createElement('div')
+      lbl.className = 'zone-lbl'
+      lbl.textContent = z.label
+      el.appendChild(lbl)
+    }
+
+    // Resize handle
+    const handle = document.createElement('div')
+    handle.className = 'resize-handle'
+    handle.addEventListener('mousedown', ev => { ev.stopPropagation(); startResize(z.id) })
+    handle.addEventListener('touchstart', ev => { ev.stopPropagation(); startResize(z.id) }, { passive: false })
+    el.appendChild(handle)
+
+    // Drag zone
+    el.addEventListener('mousedown', ev => { ev.stopPropagation(); selectZone(z.id); startDrag(z.id, ev) })
+    el.addEventListener('touchstart', ev => { ev.stopPropagation(); selectZone(z.id); startDrag(z.id, ev) }, { passive: false })
+
+    canvas.appendChild(el)
+  })
+
+  // Sidebar zone list
+  renderZoneList()
+
+  // JSON preview if open
+  if (jsonBox.classList.contains('visible')) renderJson()
+}
+
+function startDrag(id, e) {
+  isDragging = true
+  dragId = id
+  const z = zones.find(z => z.id === id)
+  const cur = getCanvasFrac(e)
+  dragOffset = { x: cur.x - z.x, y: cur.y - z.y }
+}
+
+function startResize(id) {
+  isResizing = true
+  resizeId = id
+}
+
+function renderZoneList() {
+  zoneList.innerHTML = ''
+  zoneCount.textContent = zones.length
+  zones.forEach((z, i) => {
+    const color = ZONE_COLORS[i % ZONE_COLORS.length]
+    const item = document.createElement('div')
+    item.className = 'zone-item' + (z.id === selectedId ? ' selected' : '')
+    item.innerHTML = `
+      <div class="zone-dot" style="background:${color}"></div>
+      <div class="zone-item-label">${z.label || `Zone ${i + 1}`}</div>
+      <div class="zone-item-coords">${fmt(z.w)}×${fmt(z.h)}</div>
+      <button class="zone-del" title="Delete">×</button>
+    `
+    item.querySelector('.zone-del').onclick = ev => { ev.stopPropagation(); zones = zones.filter(z2 => z2.id !== z.id); if (selectedId === z.id) selectZone(null); renderAll() }
+    item.onclick = () => selectZone(z.id)
+    zoneList.appendChild(item)
+  })
+}
+
+function fmt(n) { return Math.round(n * 100) + '%' }
+
+// ── JSON export ────────────────────────────────────────────────────────────
+function buildJson() {
+  const size   = document.getElementById('sel-size').value
+  const orient = document.getElementById('sel-orient').value
+  const marginMm = parseInt(document.getElementById('sel-margin').value, 10)
+  const [wmm, hmm] = PAGE_SIZES[size]
+  const pw = orient === 'landscape' ? hmm : wmm
+  const ph = orient === 'landscape' ? wmm : hmm
+
+  return {
+    name: document.getElementById('tpl-name').value || 'Custom Layout',
+    description: document.getElementById('tpl-desc').value || '',
+    pageSize: size,
+    orientation: orient,
+    marginMm,
+    cells: zones.map((z, i) => {
+      const obj = { x: round(z.x), y: round(z.y), w: round(z.w), h: round(z.h) }
+      if (z.label) obj.label = z.label
+      return obj
+    }),
+  }
+}
+
+function round(n) { return Math.round(n * 1000) / 1000 }
+
+function toggleJson() {
+  jsonBox.classList.toggle('visible')
+  if (jsonBox.classList.contains('visible')) renderJson()
+}
+
+function renderJson() {
+  jsonBox.textContent = JSON.stringify(buildJson(), null, 2)
+}
+
+function downloadJson() {
+  if (!zones.length) { alert('Add at least one zone first.'); return }
+  const json = JSON.stringify(buildJson(), null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url
+  a.download = (document.getElementById('tpl-name').value || 'template').replace(/\s+/g, '-').toLowerCase() + '.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+applyPageSettings()
+</script>
+</body>
+</html>
