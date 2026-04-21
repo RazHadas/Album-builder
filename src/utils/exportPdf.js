@@ -3,22 +3,21 @@ import { renderPageToCanvas } from './canvasRender'
 
 /**
  * Exports all album pages to a downloadable PDF.
- * @param {Array[][]} pages      - array of page photo arrays
- * @param {object}    config     - album config
- * @param {Function}  onProgress - called with (current, total) progress
+ * Each page object: { photos: Photo[], theme: Theme }
+ * @param {object[]} pages      - array of page objects
+ * @param {object}   config     - album config
+ * @param {Function} onProgress - called with (current, total)
  */
 export async function exportToPdf(pages, config, onProgress) {
   const dpi = config.resolution.dpi
 
-  // Effective page dimensions in mm (respecting orientation)
   const isLandscape = config.orientation === 'landscape'
   const pageWmm = isLandscape ? config.pageSize.height : config.pageSize.width
   const pageHmm = isLandscape ? config.pageSize.width  : config.pageSize.height
 
-  // Pixel dimensions at target DPI
-  const mmToPx    = dpi / 25.4
-  const pageWpx   = Math.round(pageWmm * mmToPx)
-  const pageHpx   = Math.round(pageHmm * mmToPx)
+  const mmToPx  = dpi / 25.4
+  const pageWpx = Math.round(pageWmm * mmToPx)
+  const pageHpx = Math.round(pageHmm * mmToPx)
 
   const pdf = new jsPDF({
     orientation: isLandscape ? 'landscape' : 'portrait',
@@ -27,23 +26,25 @@ export async function exportToPdf(pages, config, onProgress) {
     compress: true,
   })
 
-  const renderConfig = {
-    ...config,
-    pageSize: { ...config.pageSize, width: pageWmm, height: pageHmm },
-  }
-
   for (let i = 0; i < pages.length; i++) {
     if (onProgress) onProgress(i, pages.length)
 
-    if (i > 0) {
-      pdf.addPage([pageWmm, pageHmm], isLandscape ? 'landscape' : 'portrait')
+    if (i > 0) pdf.addPage([pageWmm, pageHmm], isLandscape ? 'landscape' : 'portrait')
+
+    const page = pages[i]
+
+    // Build a per-page config using the page's own theme
+    const pageConfig = {
+      ...config,
+      theme: page.theme,
+      pageSize: { ...config.pageSize, width: pageWmm, height: pageHmm },
     }
 
-    const canvas  = await renderPageToCanvas(pages[i], renderConfig, pageWpx, pageHpx)
+    const canvas  = await renderPageToCanvas(page.photos, pageConfig, pageWpx, pageHpx)
     const imgData = canvas.toDataURL('image/jpeg', 0.92)
     pdf.addImage(imgData, 'JPEG', 0, 0, pageWmm, pageHmm, undefined, 'FAST')
 
-    // Let the browser breathe between heavy pages
+    // Yield to browser between pages
     await new Promise(r => setTimeout(r, 0))
   }
 

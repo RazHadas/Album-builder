@@ -223,10 +223,11 @@ export const RESOLUTION_OPTIONS = [
 ]
 
 export const DEFAULT_CONFIG = {
-  pageSize:    PAGE_SIZES[0],
-  orientation: 'portrait',
-  layout:      'quartet',
-  theme:       THEMES[1], // Polaroid
-  resolution:  RESOLUTION_OPTIONS[1],
-  margin:      10,
+  pageSize:     PAGE_SIZES[0],
+  orientation:  'portrait',
+  layout:       'quartet',
+  theme:        THEMES[1], // Polaroid
+  resolution:   RESOLUTION_OPTIONS[1],
+  margin:       10,
+  autoArrange:  false,
 }
